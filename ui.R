@@ -4,12 +4,12 @@ shinyUI(fluidPage(
         titlePanel("Buy, hold and sell"),
         sidebarLayout(
                 sidebarPanel(
-                        textInput('drop.level',
+                        sliderInput('drop.level',
                                  'Percents to lose since last maximum',
-                                 value = '10'),
-                       textInput('drop.since',
-                                 'Trading days to look for last maximum',
-                                 value = '365'),
+                                 min=1, max=20, value = 10),
+                        textInput('cooldown',
+                                    'Trading days to pause since last sell',
+                                    value = '10'),
                        textInput('ema',
                                  'Period for moving average',
                                  value = '365'),
@@ -24,7 +24,7 @@ shinyUI(fluidPage(
                                  value = '2010-01-01')
                 ),
                 mainPanel(
-                        plotOutput(p)
+                        plotOutput("p")
                 )
 )
 )
