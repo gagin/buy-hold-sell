@@ -24,7 +24,10 @@ shinyUI(fluidPage(
                                  value = '2010-01-01')
                 ),
                 mainPanel(
-                        plotOutput("p")
+                       textOutput("txt"),
+                                
+                        plotOutput("p"),
+                        plotOutput("p1")
                 )
 )
 )
