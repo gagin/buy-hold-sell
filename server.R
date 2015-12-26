@@ -14,6 +14,7 @@ react <- reactive({
                 drop.level <- as.numeric(input$drop.level)
                 cooldown <- as.numeric(input$cooldown)
                 ema.length <- as.numeric(input$ema)
+                over.ema <- 1+as.numeric(input$over.ema)/100
                 start.date.string <- as.character(input$start)
                 fee <- as.numeric(input$fee)
                 # Debug init values
@@ -22,13 +23,13 @@ react <- reactive({
                         cooldown <- 10
                         drop.level <- 10
                         ema.length <- 365
-                        start.date.string <- '2000-01-01'
+                        start.date.string <- '2005-01-01'
                         fee <- 10
                 }
                 
                 start.date <- as.Date(start.date.string, "%Y-%m-%d")
                 if(is.na(start.date)) cat("Wrong date format")
-                if(start.date < index(SPY)[1]) cat(paste("Start date shouldn't be before",index(SPY)[1]))
+                if(start.date < index(SPY)[1]) return(paste("Start date shouldn't be before",index(SPY)[1]))
                 
                 work <- SPY[paste0(start.date,"::")]
                 
@@ -38,13 +39,14 @@ react <- reactive({
                 ema <- as.vector(last(ema, days))
                 
                 price <- as.vector(Cl(work))
-                bull <- price > ema
+                bull <- price > (ema * over.ema)
                 drop.coeff <- 1 - drop.level / 100
                 
                 # Init
                 stock <- 0
                 last.max <- price[1]
                 assets <- numeric(days)
+                state <- factor(levels=c("money","stock"))
                 ret <- numeric(days)
                 cooldown.counter <- cooldown + 1
                 
@@ -62,21 +64,34 @@ react <- reactive({
                         }
                         assets[i] <- money + stock * price[i]
                         cooldown.counter <- cooldown.counter + 1
+                        state[i] <- ifelse(money > 0, "money", "stock")
                 }
-                DF <- data.frame(dates=index(work), assets=assets, bull=bull)
-                p<-ggplot(aes(dates, assets, color=bull), data=DF) +
+                DF <- data.frame(dates=index(work), assets=assets, state=state)
+                p<-ggplot(aes(dates, assets, color=state), data=DF) +
+                        guides(color=guide_legend(title = "Position")) +
                         geom_point() +
                         xlab("Date") +
-                        ylab("Assets")
+                        ylab("Assets") +
+                        ggtitle("Strategy result")
                 DF1 <- data.frame(date=index(work), SPY=price, bull=bull)
-                p1<-ggplot(aes(date,SPY), data=DF1) +
+                p1<-ggplot(aes(date,SPY, color=bull), data=DF1) +
+                        guides(color=guide_legend(title = "Buy signal")) +
                         geom_point() +
+                        xlab("Date") +
+                        ylab("SPY price") +
+                        ggtitle("Underlying stock") +
                         geom_line(aes(dates, ema, color="EMA"),
                                   data = data.frame(dates=index(work), ema))
+                years.between <- as.numeric(
+                        difftime(range(index(work))[2],
+                                 range(index(work))[1])
+                        )/365.25
                 txt<- paste0(
                         "Strategy result ",
                         round((assets[days]/assets[1]-1)*100),
-                        "%, while stock did ",
+                        "% (annual return ",
+                        round(((assets[days]/assets[1])^(1/years.between)-1)*100,1),
+                        "%), while stock did ",
                         round((price[days]/price[1]-1)*100),
                         "%.")
                 list(p=p,
