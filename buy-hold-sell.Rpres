@@ -1,0 +1,115 @@
+Visualization of stop-loss adjustments for buy-and-hold investment strategy
+========================================================
+author: Alex Gaggin
+date: December 26, 2015
+
+Passive investing principles
+========================================================
+
+It's a known fact that it's very hard to beat markets. Thus
+the practical thing that a private investor can do is to ride
+the market instead of competing with it - buy a pool of investments that represent the whole
+wide market, and keep to it.
+
+- It's simple thing to do.
+- It provide reasonable returns long-term.
+- Dividends will augment returns.
+- But, it only works for long term, as there were years of market's stafgnation or even decline.
+
+Stop-loss alternative strategy
+========================================================
+
+Is it possible to wait out crash periods and re-enter market once it's growing
+again? Here's a very simple strategy.
+
+- All funds are either kept as cash, or invested to SPY exchange-traded fund, which follows S&P 500 index in composition and price dynamics.
+- It's one of the most actively traded stocks, so spread shouldn't be harsh (it's not taken in account
+in the following simulation).
+- Stock is purchased when current price is higher than moving average by selected percent.
+- Stock is sold if it's plunged by selected percent from last maximum since purchase.
+
+Model parameters
+===========================
+The model has three parameters:
+- period of moving average (longer period - lower sensitivity to price movements),
+- difference between current price and average when buy decision is triggered (higher difference means higher certainty that the market grows, but slower reaction as well)
+- drop of price from last maximum after stock purchase event (deeper drop - higher degree of certainty that market is going down, but also higher loss from this drop).
+
+Model is built for period from selected date (by default - some point before last large financial crisis) to the current moment.
+
+
+Sensitivity analysis
+========================================================
+
+```{r, echo=FALSE}
+library(quantmod)
+#install.packages("gplots")
+library(gplots)
+### Load stock prices from Yahoo, if haven't yet
+start.date.string <- "2006-01-01"
+start.date <- as.Date(start.date.string, "%Y-%m-%d")
+fee <- 10
+money <- 10000
+ema.over <- 0
+
+if (!exists("SPY"))
+        devnull <- getSymbols('SPY', from = "1900-01-01")
+
+work <- SPY[paste0(start.date,"::")]
+dates <- index(work)
+days <- length(dates)
+years.between <- as.numeric(difftime(dates[days],
+                                     dates[1])) / 365.25
+
+calc <-
+        function(drop.level = 10, ema.length = 150, ema.over = 0) {
+                ema <-
+                        EMA(Cl(SPY), n = ema.length, wilder = TRUE)
+                ema <- as.vector(last(ema, days))
+                price <- as.vector(Cl(work))
+                bull <- price > (ema * (1 + ema.over / 100))
+                
+                ### Init days cycle
+                stock <- 0
+                last.max <- price[1]
+                assets <- numeric(days)
+                ret <- numeric(days)
+                
+                ### Run days cycle
+                for (i in 1:days) {
+                        last.max <- max(last.max, price[i])
+                        if (money > 0 & bull[i]) {
+                                stock <- (money - fee) / price[i]
+                                money <- 0
+                                last.max <- price[i]
+                        }
+                        if (stock > 0 & price[i] <
+                            (last.max * (1 - drop.level / 100))) {
+                                money <- stock * price[i] - fee
+                                stock <- 0
+                        }
+                        assets[i] <- money + stock * price[i]
+                }
+                asset.ratio <- assets[days] / assets[1]
+                round((asset.ratio ^ (1 / years.between) - 1) * 100,1)
+        }
+drops <- seq(1,30,2)
+periods <- seq(20,240,20)
+res <- matrix(nrow=length(drops) ,ncol=length(periods))
+for(d in 1:length(drops))
+        for(p in 1:length(periods))
+                res[d,p] <- calc(drops[d],periods[p])
+rownames(res) <- drops
+colnames(res) <- periods
+heatmap.2(res, Rowv = NA, Colv = NA,
+          key=FALSE, trace="none",
+          lhei=c(0.5,4), 
+          lwid=c(0.5,4),
+          cellnote=res, notecol="black", col=redgreen(10),
+          xlab="Moving average period, trading days",
+          ylab="Drop from last maximum since purchase, %")
+title("Annual return with buying signal set at EMA level")
+ggplot(melt(res, varnames=c("Drop","Period"), value.name="Return"), aes(Drop, Period)) + geom_tile(aes(fill = Return),
+colour = "white") + scale_fill_gradient2(low = "red", high = "green4") +
+        geom_text(aes(fill = Return, label = Return))
+```
