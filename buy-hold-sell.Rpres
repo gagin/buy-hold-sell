@@ -100,15 +100,15 @@ calc <-
         }
 drops <- seq(5,30,5)
 periods <- seq(20,240,20)
-res <- matrix(nrow=length(drops) ,ncol=length(periods))
-for(d in 1:length(drops))
-        for(p in 1:length(periods))
-                res[d,p] <- calc(drops[d],periods[p])
-rownames(res) <- drops
-colnames(res) <- periods
-ggplot(melt(res, varnames=c("Drop","Period"), value.name="Return"),
+res <- as.data.frame(matrix(nrow = length(drops) * length(periods),ncol = 3))
+for (d in 1:length(drops))
+        for (p in 1:length(periods))
+                res[(d - 1) * length(periods) + p,] <- c(d, p, calc(drops[d],periods[p]))
+colnames(res) <- c("Drop", "Period", "Return")
+# I know it's stupid to
+ggplot(res,
        aes(Drop, Period)) +
-        geom_tile(aes(fill = Return), colour = "white") + 
+        geom_tile(aes(fill = Return), colour = "white") +
         scale_fill_gradient2(low = "red", high = "green4") +
         geom_text(aes(fill = Return, label = Return)) +
         ylab("Moving average period, trading days") +
