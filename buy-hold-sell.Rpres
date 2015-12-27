@@ -12,9 +12,9 @@ the market instead of competing with it - buy a pool of investments that represe
 wide market, and keep to it.
 
 - It's simple thing to do.
-- It provide reasonable returns long-term.
+- It provides reasonable returns long-term.
 - Dividends will augment returns.
-- But, it only works for long term, as there were years of market's stafgnation or even decline.
+- But, it only works for long term, as there were years of market's stagnation or even decline.
 
 Stop-loss alternative strategy
 ========================================================
@@ -22,11 +22,11 @@ Stop-loss alternative strategy
 Is it possible to wait out crash periods and re-enter market once it's growing
 again? Here's a very simple strategy.
 
-- All funds are either kept as cash, or invested in SPY exchange-traded fund, which follows S&P 500 index in composition and price dynamics.
-- It's one of the most actively traded stocks, so spread shouldn't be harsh (it's not taken in account
-in the following simulation).
-- Stock is purchased when current price is higher than moving average by selected percent.
-- Stock is sold if it's plunged by selected percent from last maximum since purchase.
+- All funds are kept either as cash, or invested in SPY exchange-traded fund, which follows S&P 500 index in composition and price dynamics.
+- It's one of the most actively traded stocks, so spread (ask/bid difference)
+shouldn't be harsh (it's not taken in account in the following simulation).
+- Stock is purchased when current price is higher than moving average by specified percent.
+- Stock is sold if it's plunged by specified percent from last price maximum since purchase.
 
 Influence of model parameters
 ===========================
@@ -36,14 +36,14 @@ See how particular drops in stock price are avoided by this strategy by adjustin
 - difference between current price and average when buy decision is triggered (higher difference means higher certainty that the market grows, but slower reaction as well),
 - drop of price from last maximum after stock purchase event (deeper drop - higher degree of certainty that market is going down, but also higher loss from this drop),
 - investment start date (up to current moment),
-- starting capital and broker fee.
+- broker fee and starting capital.
 
 Sensitivity analysis
 ========================================================
-left: 30%
-Sensitivity analysis shows selling after 10% drop isn't profitable as waiting
-for more evidence of a recession. But then lower drop trigger has psychological
-advantage.
+left: 35%
+As data shows, selling after 10% drop isn't as profitable as waiting
+for even more evidence of a recession. But then again, more sensitive drop trigger
+has psychological advantage - losses don't seem as big at the crisis time.
 ***
 ```{r, echo=FALSE}
 library(quantmod)
