@@ -4,14 +4,14 @@ shinyUI(fluidPage(
         titlePanel("Buy, hold and sell"),
         p("Can buy and hold investing strategy be improved by using
 stop-loss rules, and buying only when stock is
-          above moving average by a certain percent? Chart compare result of this strategy
+          above moving average by a certain percent? Charts compare result of this strategy
           to base stock itself (wide market index S&P500 traded as SPY ETF)."),
         sidebarLayout(
                 sidebarPanel(
                         h2("Sell signal"),
                         sliderInput('drop.level',
                                  'Drop from last max since buy, %',
-                                 min=1, max=30, value = 10),
+                                 min=1, max=25, value = 10),
                         h2("Buy signal"),
                        sliderInput('ema',
                                  'Period for moving average',
@@ -32,8 +32,13 @@ stop-loss rules, and buying only when stock is
                 ),
                 mainPanel(
                        textOutput("txt"),
-                        plotOutput("p", height=700)
-                )
+                        plotOutput("p", height=700),
+                       helpText("This isn't
+          a finanicial advice, use caution and see ",  a("sensitivity analysis note.",
+                                     href="http://rpubs.com/gagin/buy-hold-sell"),
+                                " See source ",
+                                a("at GitHub.", href="https://github.com/gagin/buy-hold-sell")
+                ))
 )
 )
 )

@@ -71,8 +71,10 @@ shinyServer(function(input, output) {
                 asset.ratio <- assets[days] / assets[1]
                 p1 <-
                         ggplot(aes(dates, assets, color = state), data = DF1) +
-                        guides(color = guide_legend(title = "Position")) +
+                        guides(color = guide_legend(title = "Position",
+                                                    override.aes = list(size=5))) +
                         geom_point() +
+                        theme(legend.text=element_text(size=14)) +
                         xlab("Date") +
                         ylab("Equity") +
                         ggtitle(paste0(
@@ -91,7 +93,8 @@ shinyServer(function(input, output) {
                 price.ratio <- price[days] / price[1]
                 p2 <-
                         ggplot(aes(date,SPY, color = bull), data = DF2) +
-                        guides(color = guide_legend(title = "Buy signal")) +
+                        guides(color = guide_legend(title = "Buy signal",
+                                                    override.aes = list(size=3))) +
                         geom_point() +
                         xlab("Date") +
                         ylab("SPY price") +
