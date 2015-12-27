@@ -11,7 +11,7 @@ stop-loss rules, and buying only when stock is
                         h2("Sell signal"),
                         sliderInput('drop.level',
                                  'Drop from last max since buy, %',
-                                 min=1, max=20, value = 10),
+                                 min=1, max=30, value = 10),
                         h2("Buy signal"),
                        sliderInput('ema',
                                  'Period for moving average',

@@ -1,16 +1,17 @@
 # Deployment with RRO
-# library(checkpoint); checkpoint("2015-12-01"); library(rsconnect); deployApp()
+# library(checkpoint); checkpoint("2015-12-01"); library(rsconnect); deployApp(appName = "buy-hold-sell")
 library(shiny)
 library(quantmod)
 library(ggplot2)
 library(gridExtra)
 library(grid)
 
+### Load stock prices from Yahoo, if haven't yet
+if (!exists("SPY"))
+        getSymbols('SPY', from = "1900-01-01")
+
 shinyServer(function(input, output) {
         output$p <- renderPlot({
-                ### Load stock prices from Yahoo, if haven't yet
-                if (!exists("SPY"))
-                        getSymbols('SPY', from = "1900-01-01")
                 
                 ### Initialize inputs
                 money <- as.numeric(input$money)
