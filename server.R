@@ -1,104 +1,117 @@
+# Deployment with RRO
+# library(checkpoint); checkpoint("2015-12-01"); library(rsconnect); deployApp()
 library(shiny)
 library(quantmod)
 library(ggplot2)
-#require(PerformanceAnalytics)
-
-# It's supposed to load only once outside of server, but it does many times
-# So let's fix it this way
-if(!exists("SPY")) getSymbols('SPY', from = "1900-01-01")  
+library(gridExtra)
+library(grid)
 
 shinyServer(function(input, output) {
-        
-react <- reactive({
+        output$p <- renderPlot({
+                ### Load stock prices from Yahoo, if haven't yet
+                if (!exists("SPY"))
+                        getSymbols('SPY', from = "1900-01-01")
+                
+                ### Initialize inputs
                 money <- as.numeric(input$money)
                 drop.level <- as.numeric(input$drop.level)
-                cooldown <- as.numeric(input$cooldown)
                 ema.length <- as.numeric(input$ema)
-                over.ema <- 1+as.numeric(input$over.ema)/100
+                ema.over <- as.numeric(input$ema.over)
                 start.date.string <- as.character(input$start)
-                fee <- as.numeric(input$fee)
-                # Debug init values
-                if(FALSE) {
-                        money <- 10000
-                        cooldown <- 10
-                        drop.level <- 10
-                        ema.length <- 365
-                        start.date.string <- '2005-01-01'
-                        fee <- 10
-                }
-                
                 start.date <- as.Date(start.date.string, "%Y-%m-%d")
-                if(is.na(start.date)) cat("Wrong date format")
-                if(start.date < index(SPY)[1]) return(paste("Start date shouldn't be before",index(SPY)[1]))
+                fee <- as.numeric(input$fee)
                 
+                ### Take working range
+                # We model strategy from selected date to the latest moment
                 work <- SPY[paste0(start.date,"::")]
+                dates <- index(work)
+                days <- length(dates)
+                years.between <- as.numeric(difftime(dates[days],
+                                                     dates[1])) / 365.25
                 
-                days <- length(index(work))
-                
+                ### Prepare data vectors
+                # Wilder's isn't really an exponential average, it's just
+                # a smoothing trick for arithmetic average
                 ema <- EMA(Cl(SPY), n = ema.length, wilder = TRUE)
                 ema <- as.vector(last(ema, days))
                 
                 price <- as.vector(Cl(work))
-                bull <- price > (ema * over.ema)
-                drop.coeff <- 1 - drop.level / 100
+                bull <- price > (ema * (1 + ema.over / 100))
                 
-                # Init
+                ### Init days cycle
                 stock <- 0
                 last.max <- price[1]
                 assets <- numeric(days)
-                state <- factor(levels=c("money","stock"))
+                state <- factor(levels = c("money","stock"))
                 ret <- numeric(days)
-                cooldown.counter <- cooldown + 1
                 
-                for(i in 1:days) {
+                ### Run days cycle
+                for (i in 1:days) {
                         last.max <- max(last.max, price[i])
-                        if(money > 0 & bull[i] & cooldown.counter > cooldown) {
+                        if (money > 0 & bull[i]) {
                                 stock <- (money - fee) / price[i]
                                 money <- 0
                                 last.max <- price[i]
                         }
-                        if(stock > 0 & price[i] < (drop.coeff * last.max)) {
+                        if (stock > 0 & price[i] <
+                            (last.max * (1 - drop.level / 100))) {
                                 money <- stock * price[i] - fee
                                 stock <- 0
-                                cooldown.counter <- 0
                         }
                         assets[i] <- money + stock * price[i]
-                        cooldown.counter <- cooldown.counter + 1
-                        state[i] <- ifelse(money > 0, "money", "stock")
+                        state[i] <-
+                                ifelse(money > 0, "money", "stock")
                 }
-                DF <- data.frame(dates=index(work), assets=assets, state=state)
-                p<-ggplot(aes(dates, assets, color=state), data=DF) +
-                        guides(color=guide_legend(title = "Position")) +
+                
+                ### Chart results
+                DF1 <- data.frame(dates = index(work),
+                                  assets = assets,
+                                  state = state)
+                asset.ratio <- assets[days] / assets[1]
+                p1 <-
+                        ggplot(aes(dates, assets, color = state), data = DF1) +
+                        guides(color = guide_legend(title = "Position")) +
                         geom_point() +
                         xlab("Date") +
-                        ylab("Assets") +
-                        ggtitle("Strategy result")
-                DF1 <- data.frame(date=index(work), SPY=price, bull=bull)
-                p1<-ggplot(aes(date,SPY, color=bull), data=DF1) +
-                        guides(color=guide_legend(title = "Buy signal")) +
+                        ylab("Equity") +
+                        ggtitle(paste0(
+                                "Strategy result ",
+                                round((asset.ratio - 1) * 100),
+                                "% (annual return ",
+                                round((
+                                        asset.ratio ^ (1 / years.between) - 1
+                                ) * 100,1),
+                                "%)"
+                        ))
+                
+                DF2 <- data.frame(date = index(work),
+                                  SPY = price,
+                                  bull = bull)
+                price.ratio <- price[days] / price[1]
+                p2 <-
+                        ggplot(aes(date,SPY, color = bull), data = DF2) +
+                        guides(color = guide_legend(title = "Buy signal")) +
                         geom_point() +
                         xlab("Date") +
                         ylab("SPY price") +
-                        ggtitle("Underlying stock") +
-                        geom_line(aes(dates, ema, color="EMA"),
-                                  data = data.frame(dates=index(work), ema))
-                years.between <- as.numeric(
-                        difftime(range(index(work))[2],
-                                 range(index(work))[1])
-                        )/365.25
-                txt<- paste0(
-                        "Strategy result ",
-                        round((assets[days]/assets[1]-1)*100),
-                        "% (annual return ",
-                        round(((assets[days]/assets[1])^(1/years.between)-1)*100,1),
-                        "%), while stock did ",
-                        round((price[days]/price[1]-1)*100),
-                        "%.")
-                list(p=p,
-                     p1=p1,
-                     txt=txt)
-                })
-output$p <- renderPlot({react()$p})
-output$p1 <- renderPlot({react()$p1})
-output$txt <- renderText({react()$txt})
+                        ggtitle(paste0(
+                                "Underlying stock: ",
+                                round((price.ratio - 1) * 100),
+                                "% (annual return ",
+                                round((
+                                        price.ratio ^
+                                                (1 / years.between) - 1
+                                ) * 100,1),
+                                "%)"
+                        )) +
+                        geom_line(aes(dates, ema, color = "Average"),
+                                  data = data.frame(dates = index(work), ema))
+                
+                # This next bit is needed to align axes
+                # Credits to http://www.exegetic.biz/blog/2015/05/r-recipe-aligning-axes-in-ggplot2/
+                p11 <- ggplot_gtable(ggplot_build(p1))
+                p21 <- ggplot_gtable(ggplot_build(p2))
+                p11$widths[2:3] <- p21$widths[2:3]
+                grid.arrange(p11,p21)
+        })
 })
