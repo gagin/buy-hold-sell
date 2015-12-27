@@ -35,16 +35,22 @@ The model has three parameters:
 - difference between current price and average when buy decision is triggered (higher difference means higher certainty that the market grows, but slower reaction as well)
 - drop of price from last maximum after stock purchase event (deeper drop - higher degree of certainty that market is going down, but also higher loss from this drop).
 
-Model is built for period from selected date (by default - some point before last large financial crisis) to the current moment.
+Model is built for period from selected date (by default - some point before last large financial crisis) to the current moment. Parameters to the model can be changed to see on the charts how particular
+drops in stock price are avoided [in the web-app](https://gagin.shinyapps.io/buy-hold-sell).
 
 
 Sensitivity analysis
 ========================================================
-
+left: 30%
+Sensitivity analysis shows selling after 10% drop isn't profitable as waiting
+for more evidence of a recession. But then lower drop trigger has psychological
+advantage.
+***
 ```{r, echo=FALSE}
 library(quantmod)
-#install.packages("gplots")
-library(gplots)
+library(ggplot2)
+library(reshape2)
+# This is mostly butchered shiny app code - see https://github.com/gagin/buy-hold-sell
 ### Load stock prices from Yahoo, if haven't yet
 start.date.string <- "2006-01-01"
 start.date <- as.Date(start.date.string, "%Y-%m-%d")
@@ -62,7 +68,7 @@ years.between <- as.numeric(difftime(dates[days],
                                      dates[1])) / 365.25
 
 calc <-
-        function(drop.level = 10, ema.length = 150, ema.over = 0) {
+        function(drop.level = 10, ema.length = 150, ema.over = 1) {
                 ema <-
                         EMA(Cl(SPY), n = ema.length, wilder = TRUE)
                 ema <- as.vector(last(ema, days))
@@ -93,7 +99,7 @@ calc <-
                 asset.ratio <- assets[days] / assets[1]
                 round((asset.ratio ^ (1 / years.between) - 1) * 100,1)
         }
-drops <- seq(1,30,2)
+drops <- seq(5,30,5)
 periods <- seq(20,240,20)
 res <- matrix(nrow=length(drops) ,ncol=length(periods))
 for(d in 1:length(drops))
@@ -101,15 +107,12 @@ for(d in 1:length(drops))
                 res[d,p] <- calc(drops[d],periods[p])
 rownames(res) <- drops
 colnames(res) <- periods
-heatmap.2(res, Rowv = NA, Colv = NA,
-          key=FALSE, trace="none",
-          lhei=c(0.5,4), 
-          lwid=c(0.5,4),
-          cellnote=res, notecol="black", col=redgreen(10),
-          xlab="Moving average period, trading days",
-          ylab="Drop from last maximum since purchase, %")
-title("Annual return with buying signal set at EMA level")
-ggplot(melt(res, varnames=c("Drop","Period"), value.name="Return"), aes(Drop, Period)) + geom_tile(aes(fill = Return),
-colour = "white") + scale_fill_gradient2(low = "red", high = "green4") +
-        geom_text(aes(fill = Return, label = Return))
+ggplot(melt(res, varnames=c("Drop","Period"), value.name="Return"),
+       aes(Drop, Period)) +
+        geom_tile(aes(fill = Return), colour = "white") + 
+        scale_fill_gradient2(low = "red", high = "green4") +
+        geom_text(aes(fill = Return, label = Return)) +
+        ylab("Moving average period, trading days") +
+        xlab("Drop from last maximum since purchase, %")  +
+        ggtitle("Annual return with buying signal set at EMA+1%")
 ```
