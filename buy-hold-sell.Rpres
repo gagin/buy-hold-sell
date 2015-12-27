@@ -22,22 +22,21 @@ Stop-loss alternative strategy
 Is it possible to wait out crash periods and re-enter market once it's growing
 again? Here's a very simple strategy.
 
-- All funds are either kept as cash, or invested to SPY exchange-traded fund, which follows S&P 500 index in composition and price dynamics.
+- All funds are either kept as cash, or invested in SPY exchange-traded fund, which follows S&P 500 index in composition and price dynamics.
 - It's one of the most actively traded stocks, so spread shouldn't be harsh (it's not taken in account
 in the following simulation).
 - Stock is purchased when current price is higher than moving average by selected percent.
 - Stock is sold if it's plunged by selected percent from last maximum since purchase.
 
-Model parameters
+Influence of model parameters
 ===========================
-The model has three parameters:
+
+See how particular drops in stock price are avoided by this strategy by adjusting parameters [in a web-app](https://gagin.shinyapps.io/buy-hold-sell):
 - period of moving average (longer period - lower sensitivity to price movements),
-- difference between current price and average when buy decision is triggered (higher difference means higher certainty that the market grows, but slower reaction as well)
-- drop of price from last maximum after stock purchase event (deeper drop - higher degree of certainty that market is going down, but also higher loss from this drop).
-
-Model is built for period from selected date (by default - some point before last large financial crisis) to the current moment. Parameters to the model can be changed to see on the charts how particular
-drops in stock price are avoided [in the web-app](https://gagin.shinyapps.io/buy-hold-sell).
-
+- difference between current price and average when buy decision is triggered (higher difference means higher certainty that the market grows, but slower reaction as well),
+- drop of price from last maximum after stock purchase event (deeper drop - higher degree of certainty that market is going down, but also higher loss from this drop),
+- investment start date (up to current moment),
+- starting capital and broker fee.
 
 Sensitivity analysis
 ========================================================
